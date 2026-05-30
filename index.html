@@ -11,7 +11,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Ouder Modus">
   <link rel="apple-touch-icon" href="icon.svg">
-  <!-- Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
     :root {
@@ -31,37 +30,6 @@
       background: var(--bg);
       -webkit-text-size-adjust: 100%;
     }
-
-    /* ── GATE SCREEN ── */
-    .gate-screen {
-      min-height: 100vh; min-height: 100dvh;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center; padding: 24px;
-    }
-    .gate-card {
-      background: var(--surface); border-radius: 22px;
-      padding: 32px 24px; width: 100%; max-width: 340px;
-      box-shadow: 0 4px 24px rgba(0,0,0,.13);
-      display: flex; flex-direction: column; align-items: center; gap: 14px;
-    }
-    .gate-icon  { font-size: 3.6rem; }
-    .gate-title { font-size: 1.25rem; font-weight: 800; color: var(--primary-dark); }
-    .gate-sub   { font-size: .83rem; color: var(--muted); text-align: center; line-height: 1.55; }
-    .gate-form  { width: 100%; display: flex; flex-direction: column; gap: 12px; }
-    .gate-input {
-      width: 100%; height: 56px; font-size: 1.1rem;
-      border: 2px solid var(--border); border-radius: 13px;
-      padding: 0 16px; font-family: inherit; background: var(--bg);
-      text-align: center; letter-spacing: .12em;
-    }
-    .gate-input:focus { outline: none; border-color: var(--primary); }
-    .gate-btn {
-      width: 100%; height: 56px; background: var(--primary); color: #fff;
-      border: none; border-radius: 13px; font-size: 1.05rem; font-weight: 700;
-      cursor: pointer; font-family: inherit; -webkit-tap-highlight-color: transparent;
-    }
-    .gate-btn:active { opacity: .86; }
-    .gate-error { font-size: .82rem; font-weight: 600; color: var(--danger); min-height: 1.1em; text-align: center; }
 
     /* ── PLAY MODE ── */
     .play-mode {
@@ -112,8 +80,7 @@
       background: rgba(255,255,255,.88); backdrop-filter: blur(4px);
       border-radius: 12px; padding: 5px 10px;
       box-shadow: 0 1px 4px rgba(0,0,0,.1);
-      pointer-events: none; z-index: 99;
-      transition: color .3s;
+      pointer-events: none; z-index: 99; transition: color .3s;
     }
 
     /* ── EDIT MODE ── */
@@ -177,8 +144,6 @@
       cursor: pointer; font-family: inherit; -webkit-tap-highlight-color: transparent;
     }
     .btn-add:active { background: var(--primary-lt); }
-
-    /* ── EDIT SECTIONS ── */
     .edit-section {
       margin-top: 20px; background: var(--surface);
       border-radius: 15px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.09);
@@ -188,21 +153,6 @@
       text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px;
     }
     .section-hint { font-size: .78rem; color: var(--muted); margin-bottom: 10px; line-height: 1.45; }
-    .pwd-form { display: flex; flex-direction: column; gap: 10px; }
-    .pwd-input {
-      width: 100%; height: 48px; font-size: .95rem;
-      border: 2px solid var(--border); border-radius: 11px;
-      padding: 0 14px; font-family: inherit; background: var(--bg);
-    }
-    .pwd-input:focus { outline: none; border-color: var(--primary); }
-    .btn-save-pwd {
-      height: 48px; background: var(--primary); color: #fff;
-      border: none; border-radius: 11px; font-size: .95rem; font-weight: 700;
-      cursor: pointer; font-family: inherit; -webkit-tap-highlight-color: transparent;
-    }
-    .pwd-feedback { font-size: .82rem; font-weight: 600; min-height: 1.1em; }
-    .pwd-feedback.err { color: var(--danger); }
-    .pwd-feedback.ok  { color: #16a34a; }
     .btn-secondary {
       width: 100%; height: 48px; background: none;
       border: 2px solid var(--border); border-radius: 11px;
@@ -218,8 +168,6 @@
 <script>
 'use strict';
 
-// ── Configuration ──────────────────────────────────────────────
-// After setting up Supabase, replace these two values:
 const SUPABASE_URL  = 'https://tjmufmxdxjlmicratpan.supabase.co';
 const SUPABASE_ANON = 'sb_publishable_81nSHSx3e_OfyBaDIotPAA_kxFXv-LP';
 
@@ -233,42 +181,30 @@ const DEFAULTS = [
 ];
 
 // ── State ───────────────────────────────────────────────────────
-let buttons   = [];
-let mode      = 'play';
-let recId     = null;
-let mr        = null;
-let recChunks = [];
-let recTimer  = null;
-let uiTimer   = null;
-let recStart  = 0;
-let sb        = null;   // Supabase client (null = not configured)
-let syncState = 'ok';   // 'syncing' | 'ok' | 'error'
+let buttons        = [];
+let mode           = 'play';
+let recId          = null;
+let mr             = null;
+let recChunks      = [];
+let recTimer       = null;
+let uiTimer        = null;
+let recStart       = 0;
+let sb             = null;
+let syncState      = 'ok';
 let fieldSyncTimer = null;
 
-// ── Auth helpers ────────────────────────────────────────────────
-async function sha256(str) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-}
-const hasPwd   = () => !!localStorage.getItem('psb-pwd-hash');
-const isAuthed = () => localStorage.getItem('psb-authed') === '1' && hasPwd();
-
-// ── Supabase helpers ────────────────────────────────────────────
+// ── Supabase ────────────────────────────────────────────────────
 function initSupabase() {
-  if (SUPABASE_URL === 'https://REPLACE.supabase.co') return; // not configured yet
   if (!window.supabase) return;
   sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 }
 
-function setSyncState(s) {
-  syncState = s;
-  renderSync();
-}
+function setSyncState(s) { syncState = s; renderSync(); }
 
 function renderSync() {
   const el = document.getElementById('sync');
   if (!el) return;
-  if (!isAuthed() || !sb) { el.innerHTML = ''; return; }
+  if (!sb) { el.innerHTML = ''; return; }
   const icon  = { syncing: '⟳', ok: '✓', error: '✗' }[syncState];
   const color = { syncing: '#9ca3af', ok: '#16a34a', error: '#f97316' }[syncState];
   const label = { syncing: '', ok: '', error: ' offline' }[syncState];
@@ -283,7 +219,6 @@ async function syncFromCloud() {
     if (error) { setSyncState('error'); return; }
     if (!data || !data.length) { setSyncState('ok'); return; }
     const localMap = Object.fromEntries(buttons.map(b => [b.id, b]));
-    // Cloud wins for emoji/label/position; keep local audio if cloud has none
     buttons = data.map(r => ({
       id: r.id, emoji: r.emoji, label: r.label,
       audio: r.audio ?? localMap[r.id]?.audio ?? null
@@ -309,55 +244,6 @@ async function saveAndSync(btn) {
   } catch (_) { setSyncState('error'); }
 }
 
-// ── Gate actions ────────────────────────────────────────────────
-async function trySetup() {
-  const p1  = document.getElementById('g-p1').value;
-  const p2  = document.getElementById('g-p2').value;
-  const err = document.getElementById('g-err');
-  if (p1.length < 4) { err.textContent = 'Minimaal 4 tekens vereist.'; return; }
-  if (p1 !== p2)     { err.textContent = 'Wachtwoorden komen niet overeen.'; return; }
-  err.textContent = '';
-  localStorage.setItem('psb-pwd-hash', await sha256(p1));
-  localStorage.setItem('psb-authed', '1');
-  initSupabase();
-  mode = 'play'; render();
-  loadDefaults();
-  syncFromCloud();
-}
-
-async function tryLogin() {
-  const pwd = document.getElementById('g-pwd').value;
-  const err = document.getElementById('g-err');
-  if ((await sha256(pwd)) === localStorage.getItem('psb-pwd-hash')) {
-    localStorage.setItem('psb-authed', '1');
-    initSupabase();
-    mode = 'play'; render();
-    loadDefaults();
-    syncFromCloud();
-  } else {
-    err.textContent = 'Verkeerd wachtwoord. Probeer opnieuw.';
-    document.getElementById('g-pwd').value = '';
-    document.getElementById('g-pwd').focus();
-  }
-}
-
-async function changePwd() {
-  const cur = document.getElementById('cp-cur').value;
-  const p1  = document.getElementById('cp-p1').value;
-  const p2  = document.getElementById('cp-p2').value;
-  const fb  = document.getElementById('cp-fb');
-  if ((await sha256(cur)) !== localStorage.getItem('psb-pwd-hash')) {
-    fb.className = 'pwd-feedback err'; fb.textContent = 'Huidig wachtwoord klopt niet.'; return;
-  }
-  if (p1.length < 4) { fb.className = 'pwd-feedback err'; fb.textContent = 'Minimaal 4 tekens.'; return; }
-  if (p1 !== p2)     { fb.className = 'pwd-feedback err'; fb.textContent = 'Wachtwoorden komen niet overeen.'; return; }
-  localStorage.setItem('psb-pwd-hash', await sha256(p1));
-  fb.className = 'pwd-feedback ok'; fb.textContent = '✓ Wachtwoord opgeslagen!';
-  document.getElementById('cp-cur').value = '';
-  document.getElementById('cp-p1').value  = '';
-  document.getElementById('cp-p2').value  = '';
-}
-
 // ── Persistence ─────────────────────────────────────────────────
 function loadLocal() {
   try {
@@ -373,7 +259,7 @@ function loadLocal() {
 }
 
 async function loadDefaults() {
-  if (buttons.every(b => b.audio)) return; // all buttons already have audio
+  if (buttons.every(b => b.audio)) return;
   try {
     const res = await fetch('./sounds/defaults.json');
     if (!res.ok) return;
@@ -382,7 +268,7 @@ async function loadDefaults() {
     buttons.forEach(b => {
       if (!b.audio && defs[b.id]) { b.audio = defs[b.id]; changed = true; }
     });
-    if (changed) { save(); if (isAuthed()) render(); }
+    if (changed) { save(); render(); }
   } catch (_) {}
 }
 
@@ -509,44 +395,9 @@ function ea(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;'); 
 
 // ── Render ───────────────────────────────────────────────────────
 function render() {
-  if (!isAuthed()) { renderGate(); renderSync(); return; }
   document.getElementById('app').innerHTML =
     mode === 'play' ? renderPlay() : renderEdit();
   renderSync();
-}
-
-function renderGate() {
-  document.getElementById('app').innerHTML = !hasPwd() ? `
-    <div class="gate-screen">
-      <div class="gate-card">
-        <div class="gate-icon">🔒</div>
-        <div class="gate-title">Ouder Modus</div>
-        <div class="gate-sub">Stel een wachtwoord in.<br>Je hebt het nodig om de app te openen.</div>
-        <form class="gate-form" onsubmit="trySetup(); return false;">
-          <input id="g-p1" class="gate-input" type="password"
-                 placeholder="Wachtwoord kiezen (min. 4 tekens)"
-                 autocomplete="new-password" autofocus>
-          <input id="g-p2" class="gate-input" type="password"
-                 placeholder="Herhaal wachtwoord" autocomplete="new-password">
-          <div id="g-err" class="gate-error"></div>
-          <button class="gate-btn" type="submit">Instellen &amp; openen</button>
-        </form>
-      </div>
-    </div>
-  ` : `
-    <div class="gate-screen">
-      <div class="gate-card">
-        <div class="gate-icon">🔐</div>
-        <div class="gate-title">Ouder Modus</div>
-        <form class="gate-form" onsubmit="tryLogin(); return false;">
-          <input id="g-pwd" class="gate-input" type="password"
-                 placeholder="Wachtwoord" autocomplete="current-password" autofocus>
-          <div id="g-err" class="gate-error"></div>
-          <button class="gate-btn" type="submit">Ontgrendel</button>
-        </form>
-      </div>
-    </div>
-  `;
 }
 
 function renderPlay() {
@@ -594,21 +445,6 @@ function renderEdit() {
       </div>
       <div class="btn-list">${rows}</div>
       <button class="btn-add" onclick="addBtn()">＋ Knop toevoegen</button>
-
-      <div class="edit-section">
-        <div class="section-title">🔒 Wachtwoord wijzigen</div>
-        <form class="pwd-form" onsubmit="changePwd(); return false;">
-          <input id="cp-cur" class="pwd-input" type="password"
-                 placeholder="Huidig wachtwoord" autocomplete="current-password">
-          <input id="cp-p1"  class="pwd-input" type="password"
-                 placeholder="Nieuw wachtwoord" autocomplete="new-password">
-          <input id="cp-p2"  class="pwd-input" type="password"
-                 placeholder="Nieuw wachtwoord herhalen" autocomplete="new-password">
-          <div id="cp-fb" class="pwd-feedback"></div>
-          <button class="btn-save-pwd" type="submit">Wachtwoord opslaan</button>
-        </form>
-      </div>
-
       <div class="edit-section">
         <div class="section-title">⬇ Standaardgeluiden exporteren</div>
         <p class="section-hint">
@@ -629,10 +465,10 @@ if ('serviceWorker' in navigator) {
 
 // ── Init ─────────────────────────────────────────────────────────
 loadLocal();
-if (isAuthed()) initSupabase();
+initSupabase();
 render();
 loadDefaults();
-if (isAuthed() && sb) syncFromCloud();
+if (sb) syncFromCloud();
 </script>
 </body>
 </html>
