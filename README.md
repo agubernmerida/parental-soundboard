@@ -110,6 +110,15 @@ parental-soundboard/
 └── README.md               # This file
 ```
 
+## About
+
+Made with ❤️ by **Albert** for families everywhere.
+
+**GitHub:** https://github.com/agubernmerida/parental-dashboard  
+**Email:** agubernmerida@gmail.com  
+
+Have ideas, bugs, or feedback? Reach out!
+
 ## License
 
 Open source. Use freely.

@@ -176,10 +176,41 @@
       text-align: center; font-size: .7rem; color: var(--muted);
       margin-top: 18px; padding-bottom: 8px;
     }
+    .about-btn {
+      background: none; border: none; color: var(--primary);
+      cursor: pointer; font-size: .7rem; text-decoration: underline;
+      padding: 0; -webkit-tap-highlight-color: transparent;
+    }
+    .about-modal {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,.5); z-index: 1000;
+      align-items: center; justify-content: center;
+    }
+    .about-modal.active {
+      display: flex;
+    }
+    .about-content {
+      background: var(--surface); border-radius: 15px; padding: 24px;
+      max-width: 90%; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,.2);
+    }
+    .about-content h2 { font-size: 1.2rem; color: var(--primary-dark); margin-bottom: 16px; }
+    .about-content p { font-size: .9rem; color: var(--muted); margin-bottom: 12px; line-height: 1.5; }
+    .about-content a { color: var(--primary); text-decoration: none; font-weight: 600; }
+    .about-close { margin-top: 20px; padding: 10px 20px; background: var(--primary-lt);
+      border: none; color: var(--primary-dark); border-radius: 10px; cursor: pointer; font-weight: 600; }
   </style>
 </head>
 <body>
 <div id="app"></div>
+<div id="about-modal" class="about-modal" onclick="if(event.target.id==='about-modal')closeAbout()">
+  <div class="about-content">
+    <h2>Ouder Modus</h2>
+    <p>Made with ❤️ by Albert</p>
+    <p><strong>Version:</strong> <span id="about-version">1.1.1</span></p>
+    <p><a href="https://github.com/agubernmerida/parental-dashboard" target="_blank">GitHub</a> • <a href="mailto:agubernmerida@gmail.com">Email</a></p>
+    <button class="about-close" onclick="closeAbout()">Close</button>
+  </div>
+</div>
 <script>
 'use strict';
 
@@ -188,7 +219,7 @@ const SUPABASE_ANON = 'sb_publishable_81nSHSx3e_OfyBaDIotPAA_kxFXv-LP';
 
 const STORE    = 'parental-soundboard-v1';
 const MAX_MS   = 3000;
-const VERSION  = '1.1.1';
+const VERSION  = '1.2.0';
 let defaults = {};
 
 const DEFAULTS = [
@@ -360,6 +391,13 @@ function play(id) {
 // ── Mode ─────────────────────────────────────────────────────────
 function goMode(m) { if (recId) stopRec(); mode = m; render(); }
 
+// ── About ─────────────────────────────────────────────────────────
+function showAbout() {
+  document.getElementById('about-version').textContent = VERSION;
+  document.getElementById('about-modal').classList.add('active');
+}
+function closeAbout() { document.getElementById('about-modal').classList.remove('active'); }
+
 // ── Escape helpers ───────────────────────────────────────────────
 function eh(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function ea(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
@@ -430,7 +468,7 @@ function renderEdit() {
         </p>
         <button class="btn-secondary" onclick="exportDefaults()">Exporteer defaults.json</button>
       </div>
-      <p class="version-label">v${VERSION}</p>
+      <p class="version-label">v${VERSION} • <button class="about-btn" onclick="showAbout()">About</button></p>
     </div>`;
 }
 
