@@ -11,6 +11,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Ouder Modus">
   <link rel="apple-touch-icon" href="icon.svg">
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
     :root {
       --primary:      #e8721c;
@@ -34,8 +36,7 @@
     .gate-screen {
       min-height: 100vh; min-height: 100dvh;
       display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      padding: 24px;
+      align-items: center; justify-content: center; padding: 24px;
     }
     .gate-card {
       background: var(--surface); border-radius: 22px;
@@ -55,58 +56,43 @@
     }
     .gate-input:focus { outline: none; border-color: var(--primary); }
     .gate-btn {
-      width: 100%; height: 56px;
-      background: var(--primary); color: #fff;
-      border: none; border-radius: 13px;
-      font-size: 1.05rem; font-weight: 700;
-      cursor: pointer; font-family: inherit;
-      -webkit-tap-highlight-color: transparent;
+      width: 100%; height: 56px; background: var(--primary); color: #fff;
+      border: none; border-radius: 13px; font-size: 1.05rem; font-weight: 700;
+      cursor: pointer; font-family: inherit; -webkit-tap-highlight-color: transparent;
     }
     .gate-btn:active { opacity: .86; }
     .gate-error { font-size: .82rem; font-weight: 600; color: var(--danger); min-height: 1.1em; text-align: center; }
 
     /* ── PLAY MODE ── */
     .play-mode {
-      height: 100vh; height: 100dvh;
-      display: flex; flex-direction: column;
+      height: 100vh; height: 100dvh; display: flex; flex-direction: column;
       padding: 10px;
       padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
     }
     .grid {
-      flex: 1;
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      grid-auto-rows: 1fr;
-      gap: 10px;
+      flex: 1; display: grid;
+      grid-template-columns: repeat(3, 1fr); grid-auto-rows: 1fr; gap: 10px;
     }
     .play-btn {
-      width: 100%; height: 100%;
-      background: var(--primary); color: #fff;
+      width: 100%; height: 100%; background: var(--primary); color: #fff;
       border: none; border-radius: 18px;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 7px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px;
       cursor: pointer; font-family: inherit;
-      -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation; user-select: none;
+      -webkit-tap-highlight-color: transparent; touch-action: manipulation; user-select: none;
       box-shadow: 0 3px 10px rgba(232,114,28,.35);
     }
-    .play-btn.no-audio {
-      background: #e5e7eb; color: #9ca3af;
-      box-shadow: none; cursor: default;
-    }
+    .play-btn.no-audio { background: #e5e7eb; color: #9ca3af; box-shadow: none; cursor: default; }
     .play-btn:active:not(.no-audio) { opacity: .82; }
     .play-btn.flash { animation: btn-flash .3s ease; }
     @keyframes btn-flash {
       0%   { background-color: var(--primary); transform: scale(1); }
-      35%  { background-color: #fcd34d; transform: scale(1.07);
-             box-shadow: 0 6px 20px rgba(232,114,28,.55); }
+      35%  { background-color: #fcd34d; transform: scale(1.07); box-shadow: 0 6px 20px rgba(232,114,28,.55); }
       100% { background-color: var(--primary); transform: scale(1); }
     }
     .btn-emoji { font-size: 2.5rem; line-height: 1; pointer-events: none; }
     .btn-label {
-      font-size: .72rem; font-weight: 700;
-      text-align: center; line-height: 1.25;
-      word-break: break-word; hyphens: auto;
+      font-size: .72rem; font-weight: 700; text-align: center;
+      line-height: 1.25; word-break: break-word; hyphens: auto;
       padding: 0 4px; pointer-events: none;
     }
     .fab-edit {
@@ -119,23 +105,29 @@
       -webkit-tap-highlight-color: transparent;
     }
 
+    /* ── SYNC BADGE ── */
+    .sync-badge {
+      position: fixed; bottom: 14px; left: 14px;
+      font-size: .72rem; font-weight: 700;
+      background: rgba(255,255,255,.88); backdrop-filter: blur(4px);
+      border-radius: 12px; padding: 5px 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.1);
+      pointer-events: none; z-index: 99;
+      transition: color .3s;
+    }
+
     /* ── EDIT MODE ── */
     .edit-mode { padding: 0 12px 88px; }
     .edit-header {
-      position: sticky; top: 0; z-index: 10;
-      background: var(--bg);
+      position: sticky; top: 0; z-index: 10; background: var(--bg);
       display: flex; justify-content: space-between; align-items: center;
-      padding: 14px 0 12px;
-      border-bottom: 2px solid var(--primary-lt);
-      margin-bottom: 14px;
+      padding: 14px 0 12px; border-bottom: 2px solid var(--primary-lt); margin-bottom: 14px;
     }
     .edit-header h1 { font-size: 1.1rem; font-weight: 800; color: var(--primary-dark); }
     .done-btn {
-      background: var(--primary); color: #fff;
-      border: none; border-radius: 13px;
+      background: var(--primary); color: #fff; border: none; border-radius: 13px;
       padding: 10px 24px; font-size: .95rem; font-weight: 700;
-      cursor: pointer; font-family: inherit;
-      -webkit-tap-highlight-color: transparent;
+      cursor: pointer; font-family: inherit; -webkit-tap-highlight-color: transparent;
     }
     .btn-list { display: flex; flex-direction: column; gap: 10px; }
     .edit-card {
@@ -144,9 +136,9 @@
     }
     .card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
     .inp-emoji {
-      width: 52px; height: 52px; font-size: 1.6rem;
-      text-align: center; border: 2px solid var(--border);
-      border-radius: 11px; flex-shrink: 0; font-family: inherit; background: var(--bg);
+      width: 52px; height: 52px; font-size: 1.6rem; text-align: center;
+      border: 2px solid var(--border); border-radius: 11px;
+      flex-shrink: 0; font-family: inherit; background: var(--bg);
     }
     .inp-label {
       flex: 1; height: 52px; font-size: .95rem;
@@ -168,8 +160,7 @@
       background: var(--primary-lt); border: 2px solid var(--primary);
       border-radius: 11px; font-size: .82rem; font-weight: 700;
       cursor: pointer; font-family: inherit; color: var(--primary-dark);
-      white-space: nowrap; flex-shrink: 0;
-      -webkit-tap-highlight-color: transparent;
+      white-space: nowrap; flex-shrink: 0; -webkit-tap-highlight-color: transparent;
     }
     .btn-rec.recording {
       background: #fee2e2; border-color: var(--danger); color: #dc2626;
@@ -177,30 +168,26 @@
     }
     .btn-rec:disabled { opacity: .45; pointer-events: none; }
     @keyframes rec-pulse { 0%,100%{opacity:1} 50%{opacity:.55} }
-    .rec-timer {
-      font-size: .8rem; font-weight: 800; color: #dc2626;
-      flex-shrink: 0; min-width: 28px; letter-spacing: .02em;
-    }
+    .rec-timer { font-size: .8rem; font-weight: 800; color: #dc2626; flex-shrink: 0; min-width: 28px; }
     .preview-audio { flex: 1; height: 40px; min-width: 80px; max-width: 100%; }
     .btn-add {
       display: block; width: 100%; margin-top: 14px; padding: 15px;
-      background: none; border: 2px dashed var(--primary);
-      border-radius: 15px; font-size: .95rem; font-weight: 700;
-      color: var(--primary); cursor: pointer; font-family: inherit;
-      -webkit-tap-highlight-color: transparent;
+      background: none; border: 2px dashed var(--primary); border-radius: 15px;
+      font-size: .95rem; font-weight: 700; color: var(--primary);
+      cursor: pointer; font-family: inherit; -webkit-tap-highlight-color: transparent;
     }
     .btn-add:active { background: var(--primary-lt); }
 
-    /* ── PASSWORD CHANGE IN EDIT ── */
-    .pwd-section {
+    /* ── EDIT SECTIONS ── */
+    .edit-section {
       margin-top: 20px; background: var(--surface);
-      border-radius: 15px; padding: 16px;
-      box-shadow: 0 2px 8px rgba(0,0,0,.09);
+      border-radius: 15px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.09);
     }
-    .pwd-section-title {
+    .section-title {
       font-size: .82rem; font-weight: 700; color: var(--muted);
       text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px;
     }
+    .section-hint { font-size: .78rem; color: var(--muted); margin-bottom: 10px; line-height: 1.45; }
     .pwd-form { display: flex; flex-direction: column; gap: 10px; }
     .pwd-input {
       width: 100%; height: 48px; font-size: .95rem;
@@ -211,18 +198,30 @@
     .btn-save-pwd {
       height: 48px; background: var(--primary); color: #fff;
       border: none; border-radius: 11px; font-size: .95rem; font-weight: 700;
-      cursor: pointer; font-family: inherit;
-      -webkit-tap-highlight-color: transparent;
+      cursor: pointer; font-family: inherit; -webkit-tap-highlight-color: transparent;
     }
     .pwd-feedback { font-size: .82rem; font-weight: 600; min-height: 1.1em; }
     .pwd-feedback.err { color: var(--danger); }
     .pwd-feedback.ok  { color: #16a34a; }
+    .btn-secondary {
+      width: 100%; height: 48px; background: none;
+      border: 2px solid var(--border); border-radius: 11px;
+      font-size: .9rem; font-weight: 600; color: var(--muted);
+      cursor: pointer; font-family: inherit; -webkit-tap-highlight-color: transparent;
+    }
+    .btn-secondary:active { background: var(--bg); }
   </style>
 </head>
 <body>
 <div id="app"></div>
+<div id="sync"></div>
 <script>
 'use strict';
+
+// ── Configuration ──────────────────────────────────────────────
+// After setting up Supabase, replace these two values:
+const SUPABASE_URL  = 'https://REPLACE.supabase.co';
+const SUPABASE_ANON = 'REPLACE_WITH_ANON_KEY';
 
 const STORE  = 'parental-soundboard-v1';
 const MAX_MS = 3000;
@@ -233,17 +232,20 @@ const DEFAULTS = [
   ['🛏️','Slapen'],  ['😤','Doe normaal'],['🙄','Serieus?']
 ];
 
-// ── app state ──
-let buttons = [];
-let mode    = 'play'; // 'play' | 'edit'
-let recId   = null;
-let mr      = null;
+// ── State ───────────────────────────────────────────────────────
+let buttons   = [];
+let mode      = 'play';
+let recId     = null;
+let mr        = null;
 let recChunks = [];
 let recTimer  = null;
 let uiTimer   = null;
 let recStart  = 0;
+let sb        = null;   // Supabase client (null = not configured)
+let syncState = 'ok';   // 'syncing' | 'ok' | 'error'
+let fieldSyncTimer = null;
 
-// ── auth helpers ──
+// ── Auth helpers ────────────────────────────────────────────────
 async function sha256(str) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
@@ -251,7 +253,63 @@ async function sha256(str) {
 const hasPwd   = () => !!localStorage.getItem('psb-pwd-hash');
 const isAuthed = () => localStorage.getItem('psb-authed') === '1' && hasPwd();
 
-// ── gate actions ──
+// ── Supabase helpers ────────────────────────────────────────────
+function initSupabase() {
+  if (SUPABASE_URL === 'https://REPLACE.supabase.co') return; // not configured yet
+  if (!window.supabase) return;
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+}
+
+function setSyncState(s) {
+  syncState = s;
+  renderSync();
+}
+
+function renderSync() {
+  const el = document.getElementById('sync');
+  if (!el) return;
+  if (!isAuthed() || !sb) { el.innerHTML = ''; return; }
+  const icon  = { syncing: '⟳', ok: '✓', error: '✗' }[syncState];
+  const color = { syncing: '#9ca3af', ok: '#16a34a', error: '#f97316' }[syncState];
+  const label = { syncing: '', ok: '', error: ' offline' }[syncState];
+  el.innerHTML = `<div class="sync-badge" style="color:${color}">${icon}${label}</div>`;
+}
+
+async function syncFromCloud() {
+  if (!sb) return;
+  setSyncState('syncing');
+  try {
+    const { data, error } = await sb.from('buttons').select('*').order('position');
+    if (error) { setSyncState('error'); return; }
+    if (!data || !data.length) { setSyncState('ok'); return; }
+    const localMap = Object.fromEntries(buttons.map(b => [b.id, b]));
+    // Cloud wins for emoji/label/position; keep local audio if cloud has none
+    buttons = data.map(r => ({
+      id: r.id, emoji: r.emoji, label: r.label,
+      audio: r.audio ?? localMap[r.id]?.audio ?? null
+    }));
+    save();
+    setSyncState('ok');
+    render();
+  } catch (_) { setSyncState('error'); }
+}
+
+async function saveAndSync(btn) {
+  save();
+  if (!sb) return;
+  setSyncState('syncing');
+  try {
+    await sb.from('buttons').upsert({
+      id: btn.id, emoji: btn.emoji, label: btn.label,
+      audio: btn.audio ?? null,
+      position: buttons.indexOf(btn),
+      updated_at: new Date().toISOString()
+    });
+    setSyncState('ok');
+  } catch (_) { setSyncState('error'); }
+}
+
+// ── Gate actions ────────────────────────────────────────────────
 async function trySetup() {
   const p1  = document.getElementById('g-p1').value;
   const p2  = document.getElementById('g-p2').value;
@@ -261,7 +319,10 @@ async function trySetup() {
   err.textContent = '';
   localStorage.setItem('psb-pwd-hash', await sha256(p1));
   localStorage.setItem('psb-authed', '1');
+  initSupabase();
   mode = 'play'; render();
+  loadDefaults();
+  syncFromCloud();
 }
 
 async function tryLogin() {
@@ -269,7 +330,10 @@ async function tryLogin() {
   const err = document.getElementById('g-err');
   if ((await sha256(pwd)) === localStorage.getItem('psb-pwd-hash')) {
     localStorage.setItem('psb-authed', '1');
+    initSupabase();
     mode = 'play'; render();
+    loadDefaults();
+    syncFromCloud();
   } else {
     err.textContent = 'Verkeerd wachtwoord. Probeer opnieuw.';
     document.getElementById('g-pwd').value = '';
@@ -286,7 +350,7 @@ async function changePwd() {
     fb.className = 'pwd-feedback err'; fb.textContent = 'Huidig wachtwoord klopt niet.'; return;
   }
   if (p1.length < 4) { fb.className = 'pwd-feedback err'; fb.textContent = 'Minimaal 4 tekens.'; return; }
-  if (p1 !== p2)     { fb.className = 'pwd-feedback err'; fb.textContent = 'Nieuwe wachtwoorden komen niet overeen.'; return; }
+  if (p1 !== p2)     { fb.className = 'pwd-feedback err'; fb.textContent = 'Wachtwoorden komen niet overeen.'; return; }
   localStorage.setItem('psb-pwd-hash', await sha256(p1));
   fb.className = 'pwd-feedback ok'; fb.textContent = '✓ Wachtwoord opgeslagen!';
   document.getElementById('cp-cur').value = '';
@@ -294,8 +358,8 @@ async function changePwd() {
   document.getElementById('cp-p2').value  = '';
 }
 
-// ── persistence ──
-function load() {
+// ── Persistence ─────────────────────────────────────────────────
+function loadLocal() {
   try {
     const raw = localStorage.getItem(STORE);
     if (raw) buttons = JSON.parse(raw).buttons || [];
@@ -307,16 +371,31 @@ function load() {
     );
   }
 }
+
+async function loadDefaults() {
+  if (buttons.every(b => b.audio)) return; // all buttons already have audio
+  try {
+    const res = await fetch('./sounds/defaults.json');
+    if (!res.ok) return;
+    const defs = await res.json();
+    let changed = false;
+    buttons.forEach(b => {
+      if (!b.audio && defs[b.id]) { b.audio = defs[b.id]; changed = true; }
+    });
+    if (changed) { save(); if (isAuthed()) render(); }
+  } catch (_) {}
+}
+
 function save() {
   try { localStorage.setItem(STORE, JSON.stringify({ buttons })); }
   catch (_) { alert('Opslag vol! Verwijder een opname.'); }
 }
 
-// ── uid ──
+// ── UID ─────────────────────────────────────────────────────────
 let _c = Date.now();
 function uid() { return (++_c).toString(36); }
 
-// ── recording ──
+// ── Recording ───────────────────────────────────────────────────
 async function startRec(id) {
   if (recId) return;
   let stream;
@@ -326,14 +405,14 @@ async function startRec(id) {
   recId = id; recChunks = []; recStart = Date.now();
   mr = new MediaRecorder(stream);
   mr.ondataavailable = e => { if (e.data && e.data.size > 0) recChunks.push(e.data); };
-  mr.onstop = () => {
+  mr.onstop = async () => {
     stream.getTracks().forEach(t => t.stop());
     clearTimeout(recTimer); clearInterval(uiTimer);
     const blob = new Blob(recChunks, { type: mr.mimeType || 'audio/webm' });
     const reader = new FileReader();
-    reader.onloadend = () => {
+    reader.onloadend = async () => {
       const btn = buttons.find(b => b.id === recId);
-      if (btn) { btn.audio = reader.result; save(); }
+      if (btn) { btn.audio = reader.result; await saveAndSync(btn); }
       recId = null; mr = null; render();
     };
     reader.readAsDataURL(blob);
@@ -352,22 +431,62 @@ function stopRec() {
   if (mr && mr.state !== 'inactive') mr.stop();
 }
 
-// ── button mgmt ──
-function addBtn() {
-  buttons.push({ id: uid(), emoji: '🔊', label: 'Nieuw', audio: null });
-  save(); render();
-}
-function delBtn(id) {
-  if (recId === id) stopRec();
-  buttons = buttons.filter(b => b.id !== id);
-  save(); render();
-}
-function setField(id, field, val) {
-  const b = buttons.find(b => b.id === id);
-  if (b) { b[field] = val; save(); }
+// ── Button management ────────────────────────────────────────────
+async function addBtn() {
+  const btn = { id: uid(), emoji: '🔊', label: 'Nieuw', audio: null };
+  buttons.push(btn);
+  save();
+  if (sb) {
+    setSyncState('syncing');
+    try {
+      await sb.from('buttons').insert({
+        id: btn.id, emoji: btn.emoji, label: btn.label,
+        audio: null, position: buttons.length - 1,
+        updated_at: new Date().toISOString()
+      });
+      setSyncState('ok');
+    } catch (_) { setSyncState('error'); }
+  }
+  render();
 }
 
-// ── playback ──
+async function delBtn(id) {
+  if (recId === id) stopRec();
+  buttons = buttons.filter(b => b.id !== id);
+  save();
+  if (sb) {
+    setSyncState('syncing');
+    try {
+      await sb.from('buttons').delete().eq('id', id);
+      setSyncState('ok');
+    } catch (_) { setSyncState('error'); }
+  }
+  render();
+}
+
+function setField(id, field, val) {
+  const b = buttons.find(b => b.id === id);
+  if (!b) return;
+  b[field] = val;
+  save();
+  clearTimeout(fieldSyncTimer);
+  fieldSyncTimer = setTimeout(() => saveAndSync(b), 1500);
+}
+
+function exportDefaults() {
+  const obj = {};
+  buttons.forEach(b => { if (b.audio) obj[b.id] = b.audio; });
+  if (!Object.keys(obj).length) {
+    alert('Geen opnames gevonden. Neem eerst alle knoppen op.');
+    return;
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(obj)], { type: 'application/json' }));
+  a.download = 'defaults.json';
+  a.click();
+}
+
+// ── Playback ─────────────────────────────────────────────────────
 function play(id) {
   const btn = buttons.find(b => b.id === id);
   if (!btn || !btn.audio) return;
@@ -381,18 +500,19 @@ function play(id) {
   }
 }
 
-// ── mode ──
+// ── Mode ─────────────────────────────────────────────────────────
 function goMode(m) { if (recId) stopRec(); mode = m; render(); }
 
-// ── escape helpers ──
+// ── Escape helpers ───────────────────────────────────────────────
 function eh(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function ea(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
 
-// ── render ──
+// ── Render ───────────────────────────────────────────────────────
 function render() {
-  if (!isAuthed()) { renderGate(); return; }
+  if (!isAuthed()) { renderGate(); renderSync(); return; }
   document.getElementById('app').innerHTML =
     mode === 'play' ? renderPlay() : renderEdit();
+  renderSync();
 }
 
 function renderGate() {
@@ -407,8 +527,7 @@ function renderGate() {
                  placeholder="Wachtwoord kiezen (min. 4 tekens)"
                  autocomplete="new-password" autofocus>
           <input id="g-p2" class="gate-input" type="password"
-                 placeholder="Herhaal wachtwoord"
-                 autocomplete="new-password">
+                 placeholder="Herhaal wachtwoord" autocomplete="new-password">
           <div id="g-err" class="gate-error"></div>
           <button class="gate-btn" type="submit">Instellen &amp; openen</button>
         </form>
@@ -421,8 +540,7 @@ function renderGate() {
         <div class="gate-title">Ouder Modus</div>
         <form class="gate-form" onsubmit="tryLogin(); return false;">
           <input id="g-pwd" class="gate-input" type="password"
-                 placeholder="Wachtwoord"
-                 autocomplete="current-password" autofocus>
+                 placeholder="Wachtwoord" autocomplete="current-password" autofocus>
           <div id="g-err" class="gate-error"></div>
           <button class="gate-btn" type="submit">Ontgrendel</button>
         </form>
@@ -476,8 +594,9 @@ function renderEdit() {
       </div>
       <div class="btn-list">${rows}</div>
       <button class="btn-add" onclick="addBtn()">＋ Knop toevoegen</button>
-      <div class="pwd-section">
-        <div class="pwd-section-title">🔒 Wachtwoord wijzigen</div>
+
+      <div class="edit-section">
+        <div class="section-title">🔒 Wachtwoord wijzigen</div>
         <form class="pwd-form" onsubmit="changePwd(); return false;">
           <input id="cp-cur" class="pwd-input" type="password"
                  placeholder="Huidig wachtwoord" autocomplete="current-password">
@@ -489,19 +608,31 @@ function renderEdit() {
           <button class="btn-save-pwd" type="submit">Wachtwoord opslaan</button>
         </form>
       </div>
+
+      <div class="edit-section">
+        <div class="section-title">⬇ Standaardgeluiden exporteren</div>
+        <p class="section-hint">
+          Neem alle knoppen op, klik daarna op exporteer. Stuur het bestand naar de ontwikkelaar
+          om het als standaard in de app op te nemen.
+        </p>
+        <button class="btn-secondary" onclick="exportDefaults()">Exporteer defaults.json</button>
+      </div>
     </div>`;
 }
 
-// ── service worker ──
+// ── Service worker ────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () =>
     navigator.serviceWorker.register('./service-worker.js').catch(console.warn)
   );
 }
 
-// ── init ──
-load();
+// ── Init ─────────────────────────────────────────────────────────
+loadLocal();
+if (isAuthed()) initSupabase();
 render();
+loadDefaults();
+if (isAuthed() && sb) syncFromCloud();
 </script>
 </body>
 </html>

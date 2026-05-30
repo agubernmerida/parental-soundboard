@@ -1,5 +1,5 @@
-const CACHE    = 'ouder-modus-v1';
-const PRECACHE = ['./', './index.html', './manifest.json', './icon.svg'];
+const CACHE    = 'ouder-modus-v2';
+const PRECACHE = ['./', './index.html', './manifest.json', './icon.svg', './sounds/defaults.json'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(PRECACHE)));
