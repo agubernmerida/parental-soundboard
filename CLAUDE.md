@@ -10,6 +10,10 @@ No build step, no framework, no dependencies. Edit `index.html` directly.
 
 ## Deploying changes
 
+1. Bump `VERSION` in `index.html` (e.g. `'1.1.0'` → `'1.2.0'`)
+2. If you changed any cached file (`index.html`, `manifest.json`, `icon.svg`, `service-worker.js`, `sounds/defaults.json`), bump the SW cache name in `service-worker.js` (e.g. `ouder-modus-v6` → `ouder-modus-v7`)
+3. Deploy:
+
 ```powershell
 $env:PATH += ";C:\Program Files\Git\cmd"
 cd C:\Users\Albert\Code\ParentalSoundboard
@@ -19,6 +23,8 @@ git push
 ```
 
 GitHub Pages auto-deploys from `main` within ~1 minute.
+
+**Versioning:** Use `MAJOR.MINOR.PATCH` — bump MINOR for features, PATCH for fixes.
 
 ## Architecture
 
@@ -38,7 +44,7 @@ Audio is stored as a base64 data URL (`data:audio/webm;...`). Entire `buttons` a
 
 **Recording flow:** `startRec(id)` → `getUserMedia` → `MediaRecorder` → chunks collected via `ondataavailable` → on `onstop`, blob → `FileReader.readAsDataURL` → stored in button. Auto-stops after `MAX_MS` (3000). Only one recording at a time (`recId` guard).
 
-**Service worker** (`service-worker.js`): cache-first, precaches the four static files. Cache name is `ouder-modus-v1` — bump this string to force clients to update after a deploy.
+**Service worker** (`service-worker.js`): cache-first, precaches the static files. Cache name is `ouder-modus-v6` — bump this string to force clients to update after a deploy.
 
 ## Key constraints
 

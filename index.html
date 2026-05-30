@@ -170,6 +170,12 @@
 
     /* ── SYNC BADGE ── */
     .sync-badge { display: none; }
+
+    /* ── VERSION ── */
+    .version-label {
+      text-align: center; font-size: .7rem; color: var(--muted);
+      margin-top: 18px; padding-bottom: 8px;
+    }
   </style>
 </head>
 <body>
@@ -180,8 +186,9 @@
 const SUPABASE_URL  = 'https://tjmufmxdxjlmicratpan.supabase.co';
 const SUPABASE_ANON = 'sb_publishable_81nSHSx3e_OfyBaDIotPAA_kxFXv-LP';
 
-const STORE  = 'parental-soundboard-v1';
-const MAX_MS = 3000;
+const STORE    = 'parental-soundboard-v1';
+const MAX_MS   = 3000;
+const VERSION  = '1.1.0';
 let defaults = {};
 
 const DEFAULTS = [
@@ -409,6 +416,7 @@ function renderEdit() {
         </p>
         <button class="btn-secondary" onclick="exportDefaults()">Exporteer defaults.json</button>
       </div>
+      <p class="version-label">v${VERSION}</p>
     </div>`;
 }
 
