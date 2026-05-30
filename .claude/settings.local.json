@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(\\(Get-Command git -ErrorAction SilentlyContinue\\).Source; \\(Get-Command gh -ErrorAction SilentlyContinue\\).Source)",
+      "PowerShell($env:PATH -split ';' | Where-Object { $_ -match 'git' -or $_ -match 'Git' })"
+    ]
+  }
+}

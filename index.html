@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Ouder Modus</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#e8721c">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Ouder Modus">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <style>
+    :root {
+      --primary:      #e8721c;
+      --primary-dark: #bf5a12;
+      --primary-lt:   #fde8d8;
+      --bg:           #fff7ed;
+      --surface:      #ffffff;
+      --border:       #e5e7eb;
+      --danger:       #ef4444;
+      --muted:        #6b7280;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      -webkit-text-size-adjust: 100%;
+    }
+
+    /* ── GATE SCREEN ── */
+    .gate-screen {
+      min-height: 100vh; min-height: 100dvh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 24px;
+    }
+    .gate-card {
+      background: var(--surface); border-radius: 22px;
+      padding: 32px 24px; width: 100%; max-width: 340px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.13);
+      display: flex; flex-direction: column; align-items: center; gap: 14px;
+    }
+    .gate-icon  { font-size: 3.6rem; }
+    .gate-title { font-size: 1.25rem; font-weight: 800; color: var(--primary-dark); }
+    .gate-sub   { font-size: .83rem; color: var(--muted); text-align: center; line-height: 1.55; }
+    .gate-form  { width: 100%; display: flex; flex-direction: column; gap: 12px; }
+    .gate-input {
+      width: 100%; height: 56px; font-size: 1.1rem;
+      border: 2px solid var(--border); border-radius: 13px;
+      padding: 0 16px; font-family: inherit; background: var(--bg);
+      text-align: center; letter-spacing: .12em;
+    }
+    .gate-input:focus { outline: none; border-color: var(--primary); }
+    .gate-btn {
+      width: 100%; height: 56px;
+      background: var(--primary); color: #fff;
+      border: none; border-radius: 13px;
+      font-size: 1.05rem; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .gate-btn:active { opacity: .86; }
+    .gate-error { font-size: .82rem; font-weight: 600; color: var(--danger); min-height: 1.1em; text-align: center; }
+
+    /* ── PLAY MODE ── */
+    .play-mode {
+      height: 100vh; height: 100dvh;
+      display: flex; flex-direction: column;
+      padding: 10px;
+      padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
+    }
+    .grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-auto-rows: 1fr;
+      gap: 10px;
+    }
+    .play-btn {
+      width: 100%; height: 100%;
+      background: var(--primary); color: #fff;
+      border: none; border-radius: 18px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 7px;
+      cursor: pointer; font-family: inherit;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation; user-select: none;
+      box-shadow: 0 3px 10px rgba(232,114,28,.35);
+    }
+    .play-btn.no-audio {
+      background: #e5e7eb; color: #9ca3af;
+      box-shadow: none; cursor: default;
+    }
+    .play-btn:active:not(.no-audio) { opacity: .82; }
+    .play-btn.flash { animation: btn-flash .3s ease; }
+    @keyframes btn-flash {
+      0%   { background-color: var(--primary); transform: scale(1); }
+      35%  { background-color: #fcd34d; transform: scale(1.07);
+             box-shadow: 0 6px 20px rgba(232,114,28,.55); }
+      100% { background-color: var(--primary); transform: scale(1); }
+    }
+    .btn-emoji { font-size: 2.5rem; line-height: 1; pointer-events: none; }
+    .btn-label {
+      font-size: .72rem; font-weight: 700;
+      text-align: center; line-height: 1.25;
+      word-break: break-word; hyphens: auto;
+      padding: 0 4px; pointer-events: none;
+    }
+    .fab-edit {
+      position: fixed; bottom: 14px; right: 14px;
+      background: rgba(20,20,20,.72);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      color: #fff; border: none; border-radius: 22px;
+      padding: 10px 20px; font-size: .83rem; font-weight: 600;
+      cursor: pointer; font-family: inherit; z-index: 100;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ── EDIT MODE ── */
+    .edit-mode { padding: 0 12px 88px; }
+    .edit-header {
+      position: sticky; top: 0; z-index: 10;
+      background: var(--bg);
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 0 12px;
+      border-bottom: 2px solid var(--primary-lt);
+      margin-bottom: 14px;
+    }
+    .edit-header h1 { font-size: 1.1rem; font-weight: 800; color: var(--primary-dark); }
+    .done-btn {
+      background: var(--primary); color: #fff;
+      border: none; border-radius: 13px;
+      padding: 10px 24px; font-size: .95rem; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-list { display: flex; flex-direction: column; gap: 10px; }
+    .edit-card {
+      background: var(--surface); border-radius: 15px;
+      padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.09);
+    }
+    .card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .inp-emoji {
+      width: 52px; height: 52px; font-size: 1.6rem;
+      text-align: center; border: 2px solid var(--border);
+      border-radius: 11px; flex-shrink: 0; font-family: inherit; background: var(--bg);
+    }
+    .inp-label {
+      flex: 1; height: 52px; font-size: .95rem;
+      border: 2px solid var(--border); border-radius: 11px;
+      padding: 0 12px; font-family: inherit; background: var(--bg);
+    }
+    .inp-emoji:focus, .inp-label:focus { outline: none; border-color: var(--primary); }
+    .btn-delete {
+      width: 44px; height: 44px; background: none;
+      border: 2px solid var(--border); border-radius: 11px;
+      font-size: 1.05rem; cursor: pointer; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-delete:active { background: #fee2e2; border-color: var(--danger); }
+    .card-bottom { display: flex; align-items: center; gap: 8px; }
+    .btn-rec {
+      height: 42px; padding: 0 14px;
+      background: var(--primary-lt); border: 2px solid var(--primary);
+      border-radius: 11px; font-size: .82rem; font-weight: 700;
+      cursor: pointer; font-family: inherit; color: var(--primary-dark);
+      white-space: nowrap; flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-rec.recording {
+      background: #fee2e2; border-color: var(--danger); color: #dc2626;
+      animation: rec-pulse .65s ease infinite;
+    }
+    .btn-rec:disabled { opacity: .45; pointer-events: none; }
+    @keyframes rec-pulse { 0%,100%{opacity:1} 50%{opacity:.55} }
+    .rec-timer {
+      font-size: .8rem; font-weight: 800; color: #dc2626;
+      flex-shrink: 0; min-width: 28px; letter-spacing: .02em;
+    }
+    .preview-audio { flex: 1; height: 40px; min-width: 80px; max-width: 100%; }
+    .btn-add {
+      display: block; width: 100%; margin-top: 14px; padding: 15px;
+      background: none; border: 2px dashed var(--primary);
+      border-radius: 15px; font-size: .95rem; font-weight: 700;
+      color: var(--primary); cursor: pointer; font-family: inherit;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-add:active { background: var(--primary-lt); }
+
+    /* ── PASSWORD CHANGE IN EDIT ── */
+    .pwd-section {
+      margin-top: 20px; background: var(--surface);
+      border-radius: 15px; padding: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.09);
+    }
+    .pwd-section-title {
+      font-size: .82rem; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px;
+    }
+    .pwd-form { display: flex; flex-direction: column; gap: 10px; }
+    .pwd-input {
+      width: 100%; height: 48px; font-size: .95rem;
+      border: 2px solid var(--border); border-radius: 11px;
+      padding: 0 14px; font-family: inherit; background: var(--bg);
+    }
+    .pwd-input:focus { outline: none; border-color: var(--primary); }
+    .btn-save-pwd {
+      height: 48px; background: var(--primary); color: #fff;
+      border: none; border-radius: 11px; font-size: .95rem; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .pwd-feedback { font-size: .82rem; font-weight: 600; min-height: 1.1em; }
+    .pwd-feedback.err { color: var(--danger); }
+    .pwd-feedback.ok  { color: #16a34a; }
+  </style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+'use strict';
+
+const STORE  = 'parental-soundboard-v1';
+const MAX_MS = 3000;
+
+const DEFAULTS = [
+  ['🛑','Stop'],     ['🚫','Niet doen'], ['🤫','Sssht'],
+  ['👂','Luister'],  ['🪑','Ga zitten'], ['🍽️','Eten'],
+  ['🛏️','Slapen'],  ['😤','Doe normaal'],['🙄','Serieus?']
+];
+
+// ── app state ──
+let buttons = [];
+let mode    = 'play'; // 'play' | 'edit'
+let recId   = null;
+let mr      = null;
+let recChunks = [];
+let recTimer  = null;
+let uiTimer   = null;
+let recStart  = 0;
+
+// ── auth helpers ──
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+const hasPwd   = () => !!localStorage.getItem('psb-pwd-hash');
+const isAuthed = () => localStorage.getItem('psb-authed') === '1' && hasPwd();
+
+// ── gate actions ──
+async function trySetup() {
+  const p1  = document.getElementById('g-p1').value;
+  const p2  = document.getElementById('g-p2').value;
+  const err = document.getElementById('g-err');
+  if (p1.length < 4) { err.textContent = 'Minimaal 4 tekens vereist.'; return; }
+  if (p1 !== p2)     { err.textContent = 'Wachtwoorden komen niet overeen.'; return; }
+  err.textContent = '';
+  localStorage.setItem('psb-pwd-hash', await sha256(p1));
+  localStorage.setItem('psb-authed', '1');
+  mode = 'play'; render();
+}
+
+async function tryLogin() {
+  const pwd = document.getElementById('g-pwd').value;
+  const err = document.getElementById('g-err');
+  if ((await sha256(pwd)) === localStorage.getItem('psb-pwd-hash')) {
+    localStorage.setItem('psb-authed', '1');
+    mode = 'play'; render();
+  } else {
+    err.textContent = 'Verkeerd wachtwoord. Probeer opnieuw.';
+    document.getElementById('g-pwd').value = '';
+    document.getElementById('g-pwd').focus();
+  }
+}
+
+async function changePwd() {
+  const cur = document.getElementById('cp-cur').value;
+  const p1  = document.getElementById('cp-p1').value;
+  const p2  = document.getElementById('cp-p2').value;
+  const fb  = document.getElementById('cp-fb');
+  if ((await sha256(cur)) !== localStorage.getItem('psb-pwd-hash')) {
+    fb.className = 'pwd-feedback err'; fb.textContent = 'Huidig wachtwoord klopt niet.'; return;
+  }
+  if (p1.length < 4) { fb.className = 'pwd-feedback err'; fb.textContent = 'Minimaal 4 tekens.'; return; }
+  if (p1 !== p2)     { fb.className = 'pwd-feedback err'; fb.textContent = 'Nieuwe wachtwoorden komen niet overeen.'; return; }
+  localStorage.setItem('psb-pwd-hash', await sha256(p1));
+  fb.className = 'pwd-feedback ok'; fb.textContent = '✓ Wachtwoord opgeslagen!';
+  document.getElementById('cp-cur').value = '';
+  document.getElementById('cp-p1').value  = '';
+  document.getElementById('cp-p2').value  = '';
+}
+
+// ── persistence ──
+function load() {
+  try {
+    const raw = localStorage.getItem(STORE);
+    if (raw) buttons = JSON.parse(raw).buttons || [];
+  } catch (_) {}
+  if (!buttons.length) {
+    let n = 1;
+    buttons = DEFAULTS.map(([emoji, label]) =>
+      ({ id: String(n++), emoji, label, audio: null })
+    );
+  }
+}
+function save() {
+  try { localStorage.setItem(STORE, JSON.stringify({ buttons })); }
+  catch (_) { alert('Opslag vol! Verwijder een opname.'); }
+}
+
+// ── uid ──
+let _c = Date.now();
+function uid() { return (++_c).toString(36); }
+
+// ── recording ──
+async function startRec(id) {
+  if (recId) return;
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch (_) { alert('Microfoon toegang geweigerd.'); return; }
+
+  recId = id; recChunks = []; recStart = Date.now();
+  mr = new MediaRecorder(stream);
+  mr.ondataavailable = e => { if (e.data && e.data.size > 0) recChunks.push(e.data); };
+  mr.onstop = () => {
+    stream.getTracks().forEach(t => t.stop());
+    clearTimeout(recTimer); clearInterval(uiTimer);
+    const blob = new Blob(recChunks, { type: mr.mimeType || 'audio/webm' });
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const btn = buttons.find(b => b.id === recId);
+      if (btn) { btn.audio = reader.result; save(); }
+      recId = null; mr = null; render();
+    };
+    reader.readAsDataURL(blob);
+  };
+  mr.start(100);
+  recTimer = setTimeout(stopRec, MAX_MS);
+  uiTimer  = setInterval(() => {
+    const el = document.getElementById('rec-timer');
+    if (el) el.textContent = (Math.max(0, MAX_MS - (Date.now() - recStart)) / 1000).toFixed(1) + 's';
+  }, 80);
+  render();
+}
+
+function stopRec() {
+  clearTimeout(recTimer); clearInterval(uiTimer);
+  if (mr && mr.state !== 'inactive') mr.stop();
+}
+
+// ── button mgmt ──
+function addBtn() {
+  buttons.push({ id: uid(), emoji: '🔊', label: 'Nieuw', audio: null });
+  save(); render();
+}
+function delBtn(id) {
+  if (recId === id) stopRec();
+  buttons = buttons.filter(b => b.id !== id);
+  save(); render();
+}
+function setField(id, field, val) {
+  const b = buttons.find(b => b.id === id);
+  if (b) { b[field] = val; save(); }
+}
+
+// ── playback ──
+function play(id) {
+  const btn = buttons.find(b => b.id === id);
+  if (!btn || !btn.audio) return;
+  new Audio(btn.audio).play().catch(() => {});
+  const el = document.getElementById('pb-' + id);
+  if (el) {
+    el.classList.remove('flash');
+    void el.offsetWidth;
+    el.classList.add('flash');
+    setTimeout(() => el.classList.remove('flash'), 340);
+  }
+}
+
+// ── mode ──
+function goMode(m) { if (recId) stopRec(); mode = m; render(); }
+
+// ── escape helpers ──
+function eh(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function ea(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
+
+// ── render ──
+function render() {
+  if (!isAuthed()) { renderGate(); return; }
+  document.getElementById('app').innerHTML =
+    mode === 'play' ? renderPlay() : renderEdit();
+}
+
+function renderGate() {
+  document.getElementById('app').innerHTML = !hasPwd() ? `
+    <div class="gate-screen">
+      <div class="gate-card">
+        <div class="gate-icon">🔒</div>
+        <div class="gate-title">Ouder Modus</div>
+        <div class="gate-sub">Stel een wachtwoord in.<br>Je hebt het nodig om de app te openen.</div>
+        <form class="gate-form" onsubmit="trySetup(); return false;">
+          <input id="g-p1" class="gate-input" type="password"
+                 placeholder="Wachtwoord kiezen (min. 4 tekens)"
+                 autocomplete="new-password" autofocus>
+          <input id="g-p2" class="gate-input" type="password"
+                 placeholder="Herhaal wachtwoord"
+                 autocomplete="new-password">
+          <div id="g-err" class="gate-error"></div>
+          <button class="gate-btn" type="submit">Instellen &amp; openen</button>
+        </form>
+      </div>
+    </div>
+  ` : `
+    <div class="gate-screen">
+      <div class="gate-card">
+        <div class="gate-icon">🔐</div>
+        <div class="gate-title">Ouder Modus</div>
+        <form class="gate-form" onsubmit="tryLogin(); return false;">
+          <input id="g-pwd" class="gate-input" type="password"
+                 placeholder="Wachtwoord"
+                 autocomplete="current-password" autofocus>
+          <div id="g-err" class="gate-error"></div>
+          <button class="gate-btn" type="submit">Ontgrendel</button>
+        </form>
+      </div>
+    </div>
+  `;
+}
+
+function renderPlay() {
+  const btns = buttons.map(b => `
+    <button class="play-btn${b.audio ? '' : ' no-audio'}"
+            id="pb-${b.id}" onclick="play('${b.id}')">
+      <span class="btn-emoji">${eh(b.emoji)}</span>
+      <span class="btn-label">${eh(b.label)}</span>
+    </button>`).join('');
+  return `
+    <div class="play-mode"><div class="grid">${btns}</div></div>
+    <button class="fab-edit" onclick="goMode('edit')">✏️ Bewerken</button>`;
+}
+
+function renderEdit() {
+  const rows = buttons.map(b => {
+    const isRec    = recId === b.id;
+    const otherRec = recId && !isRec;
+    return `
+      <div class="edit-card">
+        <div class="card-top">
+          <input class="inp-emoji" value="${ea(b.emoji)}" maxlength="4"
+                 oninput="setField('${b.id}','emoji',this.value)">
+          <input class="inp-label" value="${ea(b.label)}" placeholder="Label"
+                 oninput="setField('${b.id}','label',this.value)">
+          <button class="btn-delete" onclick="delBtn('${b.id}')" title="Verwijderen">🗑</button>
+        </div>
+        <div class="card-bottom">
+          <button class="btn-rec${isRec ? ' recording' : ''}"
+                  onclick="${isRec ? 'stopRec()' : `startRec('${b.id}')`}"
+                  ${otherRec ? 'disabled' : ''}>
+            ${isRec ? '⏹ Stop opname' : (b.audio ? '🔄 Opnieuw' : '🎙 Opnemen')}
+          </button>
+          ${isRec ? '<span class="rec-timer" id="rec-timer">3.0s</span>' : ''}
+          ${b.audio && !isRec
+            ? `<audio class="preview-audio" controls src="${ea(b.audio)}"></audio>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+  return `
+    <div class="edit-mode">
+      <div class="edit-header">
+        <h1>✏️ Knoppen bewerken</h1>
+        <button class="done-btn" onclick="goMode('play')">Klaar ✓</button>
+      </div>
+      <div class="btn-list">${rows}</div>
+      <button class="btn-add" onclick="addBtn()">＋ Knop toevoegen</button>
+      <div class="pwd-section">
+        <div class="pwd-section-title">🔒 Wachtwoord wijzigen</div>
+        <form class="pwd-form" onsubmit="changePwd(); return false;">
+          <input id="cp-cur" class="pwd-input" type="password"
+                 placeholder="Huidig wachtwoord" autocomplete="current-password">
+          <input id="cp-p1"  class="pwd-input" type="password"
+                 placeholder="Nieuw wachtwoord" autocomplete="new-password">
+          <input id="cp-p2"  class="pwd-input" type="password"
+                 placeholder="Nieuw wachtwoord herhalen" autocomplete="new-password">
+          <div id="cp-fb" class="pwd-feedback"></div>
+          <button class="btn-save-pwd" type="submit">Wachtwoord opslaan</button>
+        </form>
+      </div>
+    </div>`;
+}
+
+// ── service worker ──
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () =>
+    navigator.serviceWorker.register('./service-worker.js').catch(console.warn)
+  );
+}
+
+// ── init ──
+load();
+render();
+</script>
+</body>
+</html>
