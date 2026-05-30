@@ -160,6 +160,14 @@
       cursor: pointer; font-family: inherit; -webkit-tap-highlight-color: transparent;
     }
     .btn-secondary:active { background: var(--bg); }
+    .btn-restore {
+      width: 40px; height: 40px; background: none;
+      border: 2px solid var(--primary); border-radius: 10px;
+      font-size: .9rem; cursor: pointer; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      -webkit-tap-highlight-color: transparent; color: var(--primary);
+    }
+    .btn-restore:active { background: var(--primary-lt); }
   </style>
 </head>
 <body>
@@ -192,6 +200,7 @@ let recStart       = 0;
 let sb             = null;
 let syncState      = 'ok';
 let fieldSyncTimer = null;
+let defaults       = {};
 
 // ── Supabase ────────────────────────────────────────────────────
 function initSupabase() {
@@ -259,17 +268,31 @@ function loadLocal() {
 }
 
 async function loadDefaults() {
-  if (buttons.every(b => b.audio)) return;
   try {
     const res = await fetch('./sounds/defaults.json');
     if (!res.ok) return;
-    const defs = await res.json();
+    defaults = await res.json();
     let changed = false;
     buttons.forEach(b => {
-      if (!b.audio && defs[b.id]) { b.audio = defs[b.id]; changed = true; }
+      if (!b.audio && defaults[b.id]) { b.audio = defaults[b.id]; changed = true; }
     });
     if (changed) { save(); render(); }
   } catch (_) {}
+}
+
+async function restoreButton(id) {
+  if (!defaults[id]) { alert('Geen standaard opname voor deze knop.'); return; }
+  const btn = buttons.find(b => b.id === id);
+  if (btn) { btn.audio = defaults[id]; await saveAndSync(btn); render(); }
+}
+
+async function restoreAll() {
+  if (!confirm('Alle knoppen herstellen naar standaardopnames? Dit kan niet ongedaan gemaakt worden.')) return;
+  let changed = false;
+  buttons.forEach(b => {
+    if (defaults[b.id]) { b.audio = defaults[b.id]; changed = true; }
+  });
+  if (changed) { save(); if (sb) { setSyncState('syncing'); await Promise.all(buttons.map(saveAndSync)).then(() => setSyncState('ok')); } render(); }
 }
 
 function save() {
@@ -432,8 +455,8 @@ function renderEdit() {
             ${isRec ? '⏹ Stop opname' : (b.audio ? '🔄 Opnieuw' : '🎙 Opnemen')}
           </button>
           ${isRec ? '<span class="rec-timer" id="rec-timer">3.0s</span>' : ''}
-          ${b.audio && !isRec
-            ? `<audio class="preview-audio" controls src="${ea(b.audio)}"></audio>` : ''}
+          ${b.audio && !isRec ? `<audio class="preview-audio" controls src="${ea(b.audio)}"></audio>` : ''}
+          ${b.audio && !isRec && defaults[b.id] ? `<button class="btn-restore" onclick="restoreButton('${b.id}')" title="Herstellen">↻</button>` : ''}
         </div>
       </div>`;
   }).join('');
@@ -445,6 +468,13 @@ function renderEdit() {
       </div>
       <div class="btn-list">${rows}</div>
       <button class="btn-add" onclick="addBtn()">＋ Knop toevoegen</button>
+      <div class="edit-section">
+        <div class="section-title">⟲ Standaardgeluiden herstellen</div>
+        <p class="section-hint">
+          Herstellen naar de originele opnames. Uw eigen opnames gaan verloren.
+        </p>
+        <button class="btn-secondary" onclick="restoreAll()">Alles herstellen</button>
+      </div>
       <div class="edit-section">
         <div class="section-title">⬇ Standaardgeluiden exporteren</div>
         <p class="section-hint">
