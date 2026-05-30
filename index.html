@@ -11,7 +11,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Ouder Modus">
   <link rel="apple-touch-icon" href="icon.svg">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
     :root {
       --primary:      #e8721c;
@@ -168,11 +167,13 @@
       -webkit-tap-highlight-color: transparent; color: var(--primary);
     }
     .btn-restore:active { background: var(--primary-lt); }
+
+    /* ── SYNC BADGE ── */
+    .sync-badge { display: none; }
   </style>
 </head>
 <body>
 <div id="app"></div>
-<div id="sync"></div>
 <script>
 'use strict';
 
@@ -181,6 +182,7 @@ const SUPABASE_ANON = 'sb_publishable_81nSHSx3e_OfyBaDIotPAA_kxFXv-LP';
 
 const STORE  = 'parental-soundboard-v1';
 const MAX_MS = 3000;
+let defaults = {};
 
 const DEFAULTS = [
   ['🛑','Stop'],            ['🚫','Niet doen'],           ['🪑','Ga zitten'],
@@ -189,69 +191,14 @@ const DEFAULTS = [
 ];
 
 // ── State ───────────────────────────────────────────────────────
-let buttons        = [];
-let mode           = 'play';
-let recId          = null;
-let mr             = null;
-let recChunks      = [];
-let recTimer       = null;
-let uiTimer        = null;
-let recStart       = 0;
-let sb             = null;
-let syncState      = 'ok';
-let fieldSyncTimer = null;
-let defaults       = {};
-
-// ── Supabase ────────────────────────────────────────────────────
-function initSupabase() {
-  if (!window.supabase) return;
-  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-}
-
-function setSyncState(s) { syncState = s; renderSync(); }
-
-function renderSync() {
-  const el = document.getElementById('sync');
-  if (!el) return;
-  if (!sb) { el.innerHTML = ''; return; }
-  const icon  = { syncing: '⟳', ok: '✓', error: '✗' }[syncState];
-  const color = { syncing: '#9ca3af', ok: '#16a34a', error: '#f97316' }[syncState];
-  const label = { syncing: '', ok: '', error: ' offline' }[syncState];
-  el.innerHTML = `<div class="sync-badge" style="color:${color}">${icon}${label}</div>`;
-}
-
-async function syncFromCloud() {
-  if (!sb) return;
-  setSyncState('syncing');
-  try {
-    const { data, error } = await sb.from('buttons').select('*').order('position');
-    if (error) { setSyncState('error'); return; }
-    if (!data || !data.length) { setSyncState('ok'); return; }
-    const localMap = Object.fromEntries(buttons.map(b => [b.id, b]));
-    buttons = data.map(r => ({
-      id: r.id, emoji: r.emoji, label: r.label,
-      audio: r.audio ?? localMap[r.id]?.audio ?? null
-    }));
-    save();
-    setSyncState('ok');
-    render();
-  } catch (_) { setSyncState('error'); }
-}
-
-async function saveAndSync(btn) {
-  save();
-  if (!sb) return;
-  setSyncState('syncing');
-  try {
-    await sb.from('buttons').upsert({
-      id: btn.id, emoji: btn.emoji, label: btn.label,
-      audio: btn.audio ?? null,
-      position: buttons.indexOf(btn),
-      updated_at: new Date().toISOString()
-    });
-    setSyncState('ok');
-  } catch (_) { setSyncState('error'); }
-}
+let buttons   = [];
+let mode      = 'play';
+let recId     = null;
+let mr        = null;
+let recChunks = [];
+let recTimer  = null;
+let uiTimer   = null;
+let recStart  = 0;
 
 // ── Persistence ─────────────────────────────────────────────────
 function loadLocal() {
@@ -280,19 +227,19 @@ async function loadDefaults() {
   } catch (_) {}
 }
 
-async function restoreButton(id) {
+function restoreButton(id) {
   if (!defaults[id]) { alert('Geen standaard opname voor deze knop.'); return; }
   const btn = buttons.find(b => b.id === id);
-  if (btn) { btn.audio = defaults[id]; await saveAndSync(btn); render(); }
+  if (btn) { btn.audio = defaults[id]; save(); render(); }
 }
 
-async function restoreAll() {
+function restoreAll() {
   if (!confirm('Alle knoppen herstellen naar standaardopnames? Dit kan niet ongedaan gemaakt worden.')) return;
   let changed = false;
   buttons.forEach(b => {
     if (defaults[b.id]) { b.audio = defaults[b.id]; changed = true; }
   });
-  if (changed) { save(); if (sb) { setSyncState('syncing'); await Promise.all(buttons.map(saveAndSync)).then(() => setSyncState('ok')); } render(); }
+  if (changed) { save(); render(); }
 }
 
 function save() {
@@ -319,9 +266,9 @@ async function startRec(id) {
     clearTimeout(recTimer); clearInterval(uiTimer);
     const blob = new Blob(recChunks, { type: mr.mimeType || 'audio/webm' });
     const reader = new FileReader();
-    reader.onloadend = async () => {
+    reader.onloadend = () => {
       const btn = buttons.find(b => b.id === recId);
-      if (btn) { btn.audio = reader.result; await saveAndSync(btn); }
+      if (btn) { btn.audio = reader.result; save(); }
       recId = null; mr = null; render();
     };
     reader.readAsDataURL(blob);
@@ -341,35 +288,17 @@ function stopRec() {
 }
 
 // ── Button management ────────────────────────────────────────────
-async function addBtn() {
+function addBtn() {
   const btn = { id: uid(), emoji: '🔊', label: 'Nieuw', audio: null };
   buttons.push(btn);
   save();
-  if (sb) {
-    setSyncState('syncing');
-    try {
-      await sb.from('buttons').insert({
-        id: btn.id, emoji: btn.emoji, label: btn.label,
-        audio: null, position: buttons.length - 1,
-        updated_at: new Date().toISOString()
-      });
-      setSyncState('ok');
-    } catch (_) { setSyncState('error'); }
-  }
   render();
 }
 
-async function delBtn(id) {
+function delBtn(id) {
   if (recId === id) stopRec();
   buttons = buttons.filter(b => b.id !== id);
   save();
-  if (sb) {
-    setSyncState('syncing');
-    try {
-      await sb.from('buttons').delete().eq('id', id);
-      setSyncState('ok');
-    } catch (_) { setSyncState('error'); }
-  }
   render();
 }
 
@@ -378,8 +307,6 @@ function setField(id, field, val) {
   if (!b) return;
   b[field] = val;
   save();
-  clearTimeout(fieldSyncTimer);
-  fieldSyncTimer = setTimeout(() => saveAndSync(b), 1500);
 }
 
 function exportDefaults() {
@@ -420,7 +347,6 @@ function ea(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;'); 
 function render() {
   document.getElementById('app').innerHTML =
     mode === 'play' ? renderPlay() : renderEdit();
-  renderSync();
 }
 
 function renderPlay() {
@@ -495,10 +421,8 @@ if ('serviceWorker' in navigator) {
 
 // ── Init ─────────────────────────────────────────────────────────
 loadLocal();
-initSupabase();
 render();
 loadDefaults();
-if (sb) syncFromCloud();
 </script>
 </body>
 </html>
