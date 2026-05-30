@@ -1,4 +1,4 @@
-const CACHE    = 'ouder-modus-v6';
+const CACHE    = 'ouder-modus-v7';
 const PRECACHE = ['./', './index.html', './manifest.json', './icon.svg', './sounds/defaults.json'];
 
 self.addEventListener('install', e => {

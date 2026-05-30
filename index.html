@@ -188,7 +188,7 @@ const SUPABASE_ANON = 'sb_publishable_81nSHSx3e_OfyBaDIotPAA_kxFXv-LP';
 
 const STORE    = 'parental-soundboard-v1';
 const MAX_MS   = 3000;
-const VERSION  = '1.1.0';
+const VERSION  = '1.1.1';
 let defaults = {};
 
 const DEFAULTS = [
@@ -243,9 +243,23 @@ function restoreButton(id) {
 function restoreAll() {
   if (!confirm('Alle knoppen herstellen naar standaardopnames? Dit kan niet ongedaan gemaakt worden.')) return;
   let changed = false;
+
+  // Restore audio for existing buttons
   buttons.forEach(b => {
     if (defaults[b.id]) { b.audio = defaults[b.id]; changed = true; }
   });
+
+  // Re-add deleted buttons from defaults
+  Object.keys(defaults).forEach(id => {
+    if (!buttons.find(b => b.id === id)) {
+      const def = DEFAULTS.find(([_, label], idx) => String(idx + 1) === id);
+      if (def) {
+        buttons.push({ id, emoji: def[0], label: def[1], audio: defaults[id] });
+        changed = true;
+      }
+    }
+  });
+
   if (changed) { save(); render(); }
 }
 
